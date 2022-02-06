@@ -7,6 +7,7 @@ class Game(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     setter_chat_id = db.Column(db.Integer, nullable=False)
+    setter_username = db.Column(db.String(), nullable=False)
     chat_id = db.Column(db.Integer, nullable=False, unique=True)
     answer = db.Column(db.String(), nullable=False)
     guesses = db.Column(JSON)

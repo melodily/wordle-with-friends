@@ -23,23 +23,23 @@ class GameController:
     def retrieve_game(self):
         return Game.query.filter_by(chat_id=self.chat_id).first()
 
-    def try_create_game(self, answer, setter_chat_id) -> str:
+    def try_create_game(self, answer, setter_chat_id, setter_username) -> str:
         if self.is_game_ongoing():
             return 'There is an ongoing game already!'
         elif not self.is_answer_legal(answer):
             return 'Please set a valid word! Words must be between 4 to 6 characters and present in the dictionary.'
-        elif not self.create_game(answer, setter_chat_id):
-            return 'Error encountered in the server. Please try again.'
-        return f'Game started! The word is {len(answer)} characters long. Ping @WordleWithFriendsBot to guess.'
+        elif not self.create_game(answer, setter_chat_id, setter_username):
+            return 'Error encountered in the server. Please try again with /start.'
+        return f'@{setter_username} has started Wordle with Friends! The word is {len(answer)} characters long. Use /guess to guess. You have 6 tries.'
 
     def try_guessing(self, word) -> str:
         word = word.lower()
         if not self.is_game_ongoing():
-            return 'There is no ongoing game! Start a new one.'
+            return 'There is no ongoing game! Start a new one with /start.'
         if not self.is_guess_legal(word):
-            return f'"{word}" is invalid! Your guess must be a legal word of {len(self.game.answer)} characters!'
+            return f'"{word}" is invalid! Your guess must be a legal word of {len(self.game.answer)} characters! Use /guess to try again.'
         if not self.add_guess(word):
-            return 'Error encountered in the server. Please try again.'
+            return 'Error encountered in the server. Please try again with /guess.'
         return self.display_past_guesses()
 
     def is_game_ongoing(self) -> bool:
@@ -50,17 +50,17 @@ class GameController:
 
     def display_past_guesses(self) -> str:
         if not self.game:
-            return 'No games have been played.'
+            return 'No games have been played. Start a new one with /start.'
         guesses = self.game.get_guesses()
         if not guesses:
-            return 'There have been no guesses so far.'
+            return 'There have been no guesses so far. Use /guess to guess.'
         row = []
         for i in range(len(guesses)):
             row.append(f"{guesses[i]} ({i+1}/{self.MAX_GUESSES})\n" +
                        self.format_guess_result(guesses[i]))
-        history = "\n".join(row)
+        history = f"Game started by @{self.game.setter_username}\n" + "\n".join(row)
         if guesses[-1].lower() == self.game.answer:
-            history += "\nYou've guessed it!"
+            history += "\nCongratulations!"
         return history
 
     def format_guess_result(self, guess: str) -> str:
@@ -88,13 +88,13 @@ class GameController:
                     break
         return ''.join(guess_result)
 
-    def create_game(self, answer, setter_chat_id) -> bool:
+    def create_game(self, answer, setter_chat_id, setter_username) -> bool:
         try:
             if self.game:
                 db.session.delete(self.game)
                 db.session.commit()
             game = Game(chat_id=self.chat_id, answer=answer.lower(),
-                        setter_chat_id=setter_chat_id)
+                        setter_chat_id=setter_chat_id, setter_username=setter_username)
             db.session.add(game)
             db.session.commit()
             self.game = game

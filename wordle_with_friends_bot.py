@@ -41,7 +41,7 @@ def start(update: Update, context: CallbackContext):
     """Send a message when the command /start is issued."""
     if update.effective_chat.type == 'private':
         update.message.reply_text(
-            f"Let's play Wordle with friends! First type your chosen word into the message box and press enter.")
+            f"Let's play Wordle with friends! First type your chosen word (4-6 characters) into the message box and press enter.")
         return ConversationStates.SET_WORD
     else:
         controller = GameController(update.effective_chat.id)
@@ -63,7 +63,7 @@ def set_word(update: Update, context: CallbackContext):
         context.bot_data[update.effective_user.id] = word
         url = helpers.create_deep_linked_url(
             context.bot.username, START_GAME_DEEP_LINK, group=True)
-        text = f"Great, {word} is the answer! Now choose a chat to play with: \n[▶️ Choose chat]({url})."
+        text = f"Great, {word.upper()} is the answer! Now choose a chat to play with: \n[▶️ Choose chat]({url})."
         update.message.reply_text(
             text, parse_mode=ParseMode.MARKDOWN, disable_web_page_preview=True)
         return ConversationHandler.END
@@ -76,13 +76,6 @@ def cancel(update: Update, context: CallbackContext):
     update.message.reply_text("Ok! Start a new game with /start")
     return ConversationHandler.END
 
-# # TODO: Make callback button
-# def choose_group_callback(update: Update, context: CallbackContext) -> None:
-#     bot = context.bot
-#     url = helpers.create_deep_linked_url(
-#         bot.username, START_GAME, group=True)
-#     update.callback_query.answer(url=url)
-
 
 def handle_after_choosing_group(update: Update, context: CallbackContext) -> None:
     chat_id = update.effective_chat.id
@@ -90,7 +83,8 @@ def handle_after_choosing_group(update: Update, context: CallbackContext) -> Non
     answer = context.bot_data[user.id]
     controller = GameController(chat_id)
     update.message.reply_text(controller.try_create_game(
-        answer, update.effective_user.id))
+        answer, update.effective_user.id, update.effective_user.username)
+    )
 
 
 def history(update: Update, context: CallbackContext) -> None:
@@ -115,9 +109,11 @@ def help_command(update: Update, context: CallbackContext) -> None:
     # TODO: Put commands in inline buttons
     """Send a message when the command /help is issued."""
     update.message.reply_text(
-        '\n'.join(["/start to start a game",
-                  "/guess to guess the word",
-                   "/history to see past guesses"])
+        '\n'.join([
+            "/start to start a game",
+            "/guess to guess the word",
+            "/history to see past guesses"
+        ])
     )
 
 
