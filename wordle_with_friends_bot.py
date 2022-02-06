@@ -92,17 +92,19 @@ def history(update: Update, context: CallbackContext) -> None:
         update.message.reply_text(MESSAGE_FOR_INVALID_COMMANDS_IN_PRIVATE_CHAT)
         return
     controller = GameController(update.message.chat_id)
-    update.message.reply_text(controller.display_past_guesses())
+    update.message.reply_text(controller.display_past_guesses(), parse_mode=ParseMode.MARKDOWN)
 
 
 def guess(update: Update, context: CallbackContext) -> None:
     if update.effective_chat.type == 'private':
         update.message.reply_text(MESSAGE_FOR_INVALID_COMMANDS_IN_PRIVATE_CHAT)
         return
-    # TODO: save user id of guess
     # TODO: save history of games
     controller = GameController(update.message.chat_id)
-    update.message.reply_text(controller.try_guessing(context.args[0]))
+    if not context.args:
+        update.message.reply_text('Please type a word after /guess.')
+        return
+    update.message.reply_text(controller.try_guessing(context.args[0], update.effective_user.username), parse_mode=ParseMode.MARKDOWN)
 
 
 def help_command(update: Update, context: CallbackContext) -> None:

@@ -18,7 +18,13 @@ class Game(db.Model):
     def get_guesses(self):
         return self.guesses.get('guesses', []) if self.guesses else []
 
-    def add_guess(self, guess: str):
+    def add_guess(self, guess: str, username: str):
         self.guesses = {
-            'guesses': self.get_guesses() + [guess]
+            'guesses': self.get_guesses() + [self.make_guess(guess, username)]
+        }
+
+    def make_guess(self, guess: str, by_username: str):
+        return {
+            "guess": guess,
+            "by": by_username
         }

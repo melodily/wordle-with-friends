@@ -32,13 +32,13 @@ class GameController:
             return 'Error encountered in the server. Please try again with /start.'
         return f'@{setter_username} has started Wordle with Friends! The word is {len(answer)} characters long. Use /guess to guess. You have 6 tries.'
 
-    def try_guessing(self, word) -> str:
+    def try_guessing(self, word, guesser_username) -> str:
         word = word.lower()
         if not self.is_game_ongoing():
             return 'There is no ongoing game! Start a new one with /start.'
         if not self.is_guess_legal(word):
             return f'"{word}" is invalid! Your guess must be a legal word of {len(self.game.answer)} characters! Use /guess to try again.'
-        if not self.add_guess(word):
+        if not self.add_guess(word, guesser_username):
             return 'Error encountered in the server. Please try again with /guess.'
         return self.display_past_guesses()
 
@@ -46,7 +46,7 @@ class GameController:
         if not self.game:
             return False
         guesses = self.game.get_guesses()
-        return not guesses or (len(guesses) < self.MAX_GUESSES and guesses[-1] != self.game.answer)
+        return not guesses or (len(guesses) < self.MAX_GUESSES and guesses[-1]['guess'] != self.game.answer)
 
     def display_past_guesses(self) -> str:
         if not self.game:
@@ -56,10 +56,12 @@ class GameController:
             return 'There have been no guesses so far. Use /guess to guess.'
         row = []
         for i in range(len(guesses)):
-            row.append(f"{guesses[i]} ({i+1}/{self.MAX_GUESSES})\n" +
-                       self.format_guess_result(guesses[i]))
+            row.append(f"""```
+{'  '.join([c for c in guesses[i]['guess'].upper()])}```""")
+            row.append(self.format_guess_result(guesses[i]['guess']))
+            row.append(f"(@{guesses[i]['by']}: {i+1}/{self.MAX_GUESSES})")
         history = f"Game started by @{self.game.setter_username}\n" + "\n".join(row)
-        if guesses[-1].lower() == self.game.answer:
+        if guesses[-1]['guess'].lower() == self.game.answer:
             history += "\nCongratulations!"
         return history
 
@@ -88,7 +90,7 @@ class GameController:
                     break
         return ''.join(guess_result)
 
-    def create_game(self, answer, setter_chat_id, setter_username) -> bool:
+    def create_game(self, answer: str, setter_chat_id: str, setter_username: str) -> bool:
         try:
             if self.game:
                 db.session.delete(self.game)
@@ -103,9 +105,9 @@ class GameController:
             logger.error(e)
             return False
 
-    def add_guess(self, guess) -> bool:
+    def add_guess(self, guess: str, guesser_username: str) -> bool:
         try:
-            self.game.add_guess(guess)
+            self.game.add_guess(guess, guesser_username)
             db.session.commit()
             return True
         except Exception as e:
