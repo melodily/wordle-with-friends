@@ -63,6 +63,8 @@ class GameController:
         history = f"Game started by @{self.game.setter_username}\n" + "\n".join(row)
         if guesses[-1]['guess'].lower() == self.game.answer:
             history += "\nCongratulations!"
+        elif len(guesses) == self.MAX_GUESSES:
+            history += f"\nBetter luck next time! The answer was {self.game.answer.upper()}. /start to start another game!"
         return history
 
     def format_guess_result(self, guess: str) -> str:
