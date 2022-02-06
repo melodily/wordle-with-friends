@@ -21,7 +21,6 @@ from telegram.ext import Updater, InlineQueryHandler, CommandHandler, CallbackCo
 from telegram.utils import helpers
 from controller import GameController
 from enum import IntEnum
-from typing import Optional
 
 # Enable logging
 logging.basicConfig(
@@ -30,14 +29,15 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 START_GAME_DEEP_LINK = 'start-game'
+SET_WORD_DEEP_LINK = 'set-word'
 MESSAGE_FOR_INVALID_COMMANDS_IN_PRIVATE_CHAT = "It's called Wordle with Friends! Use /start to start a game with your friends."
-
 
 class ConversationStates(IntEnum):
     SET_WORD = 1
 
 
 def start(update: Update, context: CallbackContext):
+    logger.info(update.effective_chat.type)
     """Send a message when the command /start is issued."""
     if update.effective_chat.type == 'private':
         update.message.reply_text(
@@ -46,15 +46,14 @@ def start(update: Update, context: CallbackContext):
     else:
         controller = GameController(update.effective_chat.id)
         if controller.is_game_ongoing():
-            # TODO: insert setter username
             update.message.reply_text(
-                f"There is an ongoing game. Use /guess to guess the word!")
+                f"{controller.game.setter_username} has started a game. Use /guess to guess the word!")
         else:
             # Redirect to bot if in group chat and no ongoing game
-            url = helpers.create_deep_linked_url(context.bot.username)
-            text = f"Let's play Wordle with Friends! Go here to set your word: \n[▶️ Set word]({url})."
+            url = helpers.create_deep_linked_url(context.bot.username, SET_WORD_DEEP_LINK)
+            text = f"Let's play Wordle with Friends! Go here to set your word: \n[▶️ <a href='{url}'>Set word</a>]."
             update.message.reply_text(
-                text, parse_mode=ParseMode.MARKDOWN, disable_web_page_preview=True)
+                text, parse_mode=ParseMode.HTML, disable_web_page_preview=True)
 
 
 def set_word(update: Update, context: CallbackContext):
@@ -63,9 +62,9 @@ def set_word(update: Update, context: CallbackContext):
         context.bot_data[update.effective_user.id] = word
         url = helpers.create_deep_linked_url(
             context.bot.username, START_GAME_DEEP_LINK, group=True)
-        text = f"Great, {word.upper()} is the answer! Now choose a chat to play with: \n[▶️ Choose chat]({url})."
+        text = f"Great, {word.upper()} is the answer! Now choose a chat to play with: \n[▶️ <a href='{url}'>Choose chat</a>]."
         update.message.reply_text(
-            text, parse_mode=ParseMode.MARKDOWN, disable_web_page_preview=True)
+            text, parse_mode=ParseMode.HTML, disable_web_page_preview=True)
         return ConversationHandler.END
     else:
         update.message.reply_text(
@@ -83,7 +82,7 @@ def handle_after_choosing_group(update: Update, context: CallbackContext) -> Non
     answer = context.bot_data[user.id]
     controller = GameController(chat_id)
     update.message.reply_text(controller.try_create_game(
-        answer, update.effective_user.id, update.effective_user.username)
+        answer, update.effective_user.id, update.effective_user.first_name)
     )
 
 
@@ -92,7 +91,7 @@ def history(update: Update, context: CallbackContext) -> None:
         update.message.reply_text(MESSAGE_FOR_INVALID_COMMANDS_IN_PRIVATE_CHAT)
         return
     controller = GameController(update.message.chat_id)
-    update.message.reply_text(controller.display_past_guesses(), parse_mode=ParseMode.MARKDOWN)
+    update.message.reply_text(controller.display_past_guesses(), parse_mode=ParseMode.HTML)
 
 
 def guess(update: Update, context: CallbackContext) -> None:
@@ -104,7 +103,9 @@ def guess(update: Update, context: CallbackContext) -> None:
     if not context.args:
         update.message.reply_text('Please type a word after /guess.')
         return
-    update.message.reply_text(controller.try_guessing(context.args[0], update.effective_user.username), parse_mode=ParseMode.MARKDOWN)
+    update.message.reply_text(
+        controller.try_guessing(context.args[0], update.effective_user.first_name), 
+        parse_mode=ParseMode.HTML)
 
 
 def help_command(update: Update, context: CallbackContext) -> None:
@@ -113,7 +114,7 @@ def help_command(update: Update, context: CallbackContext) -> None:
     update.message.reply_text(
         '\n'.join([
             "/start to start a game",
-            "/guess to guess the word",
+            "/guess [word] to guess the word",
             "/history to see past guesses"
         ])
     )

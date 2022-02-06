@@ -30,7 +30,7 @@ class GameController:
             return 'Please set a valid word! Words must be between 4 to 6 characters and present in the dictionary.'
         elif not self.create_game(answer, setter_chat_id, setter_username):
             return 'Error encountered in the server. Please try again with /start.'
-        return f'@{setter_username} has started Wordle with Friends! The word is {len(answer)} characters long. Use /guess to guess. You have 6 tries.'
+        return f'{setter_username} has started Wordle with Friends! The word is {len(answer)} characters long. Use /guess [word] to guess. You have 6 tries.'
 
     def try_guessing(self, word, guesser_username) -> str:
         word = word.lower()
@@ -56,15 +56,14 @@ class GameController:
             return 'There have been no guesses so far. Use /guess to guess.'
         row = []
         for i in range(len(guesses)):
-            row.append(f"""```
-{'  '.join([c for c in guesses[i]['guess'].upper()])}```""")
+            row.append(f"""<code>{' '.join([c for c in guesses[i]['guess'].upper()])}</code>""")
             row.append(self.format_guess_result(guesses[i]['guess']))
-            row.append(f"(@{guesses[i]['by']}: {i+1}/{self.MAX_GUESSES})")
-        history = f"Game started by @{self.game.setter_username}\n" + "\n".join(row)
+            row.append(f"({guesses[i]['by']}: {i+1}/{self.MAX_GUESSES})")
+        history = f"Game started by {self.game.setter_username}\n" + "\n".join(row)
         if guesses[-1]['guess'].lower() == self.game.answer:
-            history += "\nCongratulations!"
+            history += "\nCongratulations! Use /start to play again!"
         elif len(guesses) == self.MAX_GUESSES:
-            history += f"\nBetter luck next time! The answer was {self.game.answer.upper()}. /start to start another game!"
+            history += f"\nBetter luck next time! The answer was {self.game.answer.upper()}. Use /start to start another game!"
         return history
 
     def format_guess_result(self, guess: str) -> str:
