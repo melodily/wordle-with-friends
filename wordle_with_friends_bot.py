@@ -14,14 +14,14 @@ bot.
 """
 
 import logging
-import uuid
 from dotenv import load_dotenv
 import os
-from uuid import uuid4
-from telegram import InlineKeyboardButton, InlineKeyboardMarkup, InlineQueryResultArticle, ParseMode, InputTextMessageContent, Update
-from telegram.ext import Updater, InlineQueryHandler, CommandHandler, CallbackContext, CallbackQueryHandler, Filters
+from telegram import InlineKeyboardButton, InlineKeyboardMarkup, InlineQueryResultArticle, ParseMode, InputTextMessageContent, ReplyKeyboardMarkup, Update
+from telegram.ext import Updater, InlineQueryHandler, CommandHandler, CallbackContext, CallbackQueryHandler, Filters, ConversationHandler, MessageHandler
 from telegram.utils import helpers
 from controller import GameController
+from enum import IntEnum
+from typing import Optional
 
 # Enable logging
 logging.basicConfig(
@@ -29,31 +29,52 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-START_GAME = 'start-game'
+START_GAME_DEEP_LINK = 'start-game'
+MESSAGE_FOR_INVALID_COMMANDS_IN_PRIVATE_CHAT = "It's Wordle not Solitaire! Use /start to start a game with your friends."
 
 
-def start(update: Update, context: CallbackContext) -> None:
+class ConversationStates(IntEnum):
+    SET_WORD = 1
+
+
+def start(update: Update, context: CallbackContext):
     """Send a message when the command /start is issued."""
-    update.message.reply_text(
-        f"Let's play Wordle with friends! First set a word")
-    # Todo: insert command to set word
+    if update.effective_chat.type == 'private':
+        update.message.reply_text(
+            f"Let's play Wordle with friends! First type your chosen word into the message box and press enter.")
+        return ConversationStates.SET_WORD
+    else:
+        controller = GameController(update.effective_chat.id)
+        if controller.is_game_ongoing():
+            # TODO: insert setter username
+            update.message.reply_text(
+                f"There is an ongoing game. Use /guess to guess the word!")
+        else:
+            # Redirect to bot if in group chat and no ongoing game
+            url = helpers.create_deep_linked_url(context.bot.username)
+            text = f"Let's play Wordle with Friends! Go here to set your word: \n[▶️ Set word]({url})."
+            update.message.reply_text(
+                text, parse_mode=ParseMode.MARKDOWN, disable_web_page_preview=True)
 
 
-def set_word(update: Update, context: CallbackContext) -> None:
-    word = context.args[0]
-    logger.info(word)
+def set_word(update: Update, context: CallbackContext):
+    word = update.message.text.split(' ')[0] if update.message.text else ''
     if GameController.is_answer_legal(word):
         context.bot_data[update.effective_user.id] = word
-        bot = context.bot
         url = helpers.create_deep_linked_url(
-            bot.username, START_GAME, group=True)
-        text = f"Great! Now choose a chat to play with [▶️ CHOOSE]({url})."
+            context.bot.username, START_GAME_DEEP_LINK, group=True)
+        text = f"Great, {word} is the answer! Now choose a chat to play with: \n[▶️ Choose chat]({url})."
         update.message.reply_text(
             text, parse_mode=ParseMode.MARKDOWN, disable_web_page_preview=True)
+        return ConversationHandler.END
     else:
         update.message.reply_text(
-            "Please set a valid word! Words must be between 4 to 6 characters and present in the dictionary.")
+            "Please set a valid word! Words must be between 4 to 6 characters and present in the dictionary. Use /cancel to exit.")
 
+
+def cancel(update: Update, context: CallbackContext):
+    update.message.reply_text("Ok! Start a new game with /start")
+    return ConversationHandler.END
 
 # # TODO: Make callback button
 # def choose_group_callback(update: Update, context: CallbackContext) -> None:
@@ -73,19 +94,31 @@ def handle_after_choosing_group(update: Update, context: CallbackContext) -> Non
 
 
 def history(update: Update, context: CallbackContext) -> None:
+    if update.effective_chat.type == 'private':
+        update.message.reply_text(MESSAGE_FOR_INVALID_COMMANDS_IN_PRIVATE_CHAT)
+        return
     controller = GameController(update.message.chat_id)
     update.message.reply_text(controller.display_past_guesses())
 
 
 def guess(update: Update, context: CallbackContext) -> None:
+    if update.effective_chat.type == 'private':
+        update.message.reply_text(MESSAGE_FOR_INVALID_COMMANDS_IN_PRIVATE_CHAT)
+        return
+    # TODO: save user id of guess
+    # TODO: save history of games
     controller = GameController(update.message.chat_id)
     update.message.reply_text(controller.try_guessing(context.args[0]))
 
 
 def help_command(update: Update, context: CallbackContext) -> None:
+    # TODO: Put commands in inline buttons
     """Send a message when the command /help is issued."""
     update.message.reply_text(
-        "Let's play Wordle with friends! Go to the chat and type @WordleWithFriendsBot to start a game.")
+        '\n'.join(["/start to start a game",
+                  "/guess to guess the word",
+                   "/history to see past guesses"])
+    )
 
 
 def main() -> None:
@@ -96,15 +129,25 @@ def main() -> None:
 
     # Get the dispatcher to register handlers
     dispatcher = updater.dispatcher
+    # This handles the deep link after user has chosen a group to play with
     dispatcher.add_handler(
         CommandHandler("start", handle_after_choosing_group,
-                       Filters.regex(START_GAME))
+                       Filters.regex(START_GAME_DEEP_LINK))
     )
-    dispatcher.add_handler(CommandHandler("start", start))
+
     dispatcher.add_handler(CommandHandler("history", history))
-    dispatcher.add_handler(CommandHandler("play", set_word))
     dispatcher.add_handler(CommandHandler("guess", guess))
     dispatcher.add_handler(CommandHandler("help", help_command))
+
+    conv_handler = ConversationHandler(
+        entry_points=[CommandHandler('start', start)],
+        states={
+            ConversationStates.SET_WORD: [MessageHandler(
+                Filters.text & ~Filters.command, callback=set_word)]
+        },
+        fallbacks=[CommandHandler('cancel', cancel)]
+    )
+    dispatcher.add_handler(conv_handler)
 
     # Start the Bot
     updater.start_polling()
