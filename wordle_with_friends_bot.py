@@ -30,7 +30,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 START_GAME_DEEP_LINK = 'start-game'
-MESSAGE_FOR_INVALID_COMMANDS_IN_PRIVATE_CHAT = "It's Wordle not Solitaire! Use /start to start a game with your friends."
+MESSAGE_FOR_INVALID_COMMANDS_IN_PRIVATE_CHAT = "It's called Wordle with Friends! Use /start to start a game with your friends."
 
 
 class ConversationStates(IntEnum):
