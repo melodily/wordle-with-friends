@@ -37,7 +37,6 @@ class ConversationStates(IntEnum):
 
 
 def start(update: Update, context: CallbackContext):
-    logger.info(update.effective_chat.type)
     """Send a message when the command /start is issued."""
     if update.effective_chat.type == 'private':
         update.message.reply_text(
@@ -148,8 +147,16 @@ def main() -> None:
     )
     dispatcher.add_handler(conv_handler)
 
-    # Start the Bot
-    updater.start_polling()
+    # Start the Bot        
+    if os.environ.get('ENV') == 'prod':
+        updater.start_webhook(listen=os.environ.get("HOSTNAME", ""),
+                        port=8443,
+                        url_path=os.environ.get('TELEGRAM_TOKEN', ''),
+                        key='private.key',
+                        cert='cert.pem',
+                        webhook_url=f'https://{os.environ.get("HOSTNAME", "")}/{os.environ.get("TELEGRAM_TOKEN", "")}')
+    else:
+        updater.start_polling()
 
     # Run the bot until you press Ctrl-C or the process receives SIGINT,
     # SIGTERM or SIGABRT. This should be used most of the time, since

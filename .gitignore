@@ -1,6 +1,9 @@
 .env
 .vscode
-database.ini
+private.key
+cert.pem
+fly.toml
+interactive*.conf
 words.py
 words.txt
 words_alpha.txt
