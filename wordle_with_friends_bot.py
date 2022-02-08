@@ -16,8 +16,8 @@ bot.
 import logging
 from dotenv import load_dotenv
 import os
-from telegram import InlineKeyboardButton, InlineKeyboardMarkup, InlineQueryResultArticle, ParseMode, InputTextMessageContent, ReplyKeyboardMarkup, Update
-from telegram.ext import Updater, InlineQueryHandler, CommandHandler, CallbackContext, CallbackQueryHandler, Filters, ConversationHandler, MessageHandler
+from telegram import ParseMode, Update
+from telegram.ext import Updater, CommandHandler, CallbackContext, Filters, ConversationHandler, MessageHandler
 from telegram.utils import helpers
 from controller import GameController
 from enum import IntEnum
@@ -81,9 +81,14 @@ def handle_after_choosing_group(update: Update, context: CallbackContext) -> Non
     user = update.effective_user
     answer = context.bot_data.get(user.id)
     controller = GameController(chat_id)
-    update.message.reply_text(controller.try_create_game(
-        answer, update.effective_user.id, update.effective_user.first_name)
-    )
+    if answer:
+        update.message.reply_text(controller.try_create_game(
+            answer, update.effective_user.id, update.effective_user.first_name)
+        )
+    else:
+        url = helpers.create_deep_linked_url(context.bot.username, SET_WORD_DEEP_LINK)
+        update.message.reply_text(f"Sorry, we lost your answer. Try creating a new one here: \n[▶️ <a href='{url}'>Set word</a>]",
+        parse_mode=ParseMode.HTML, disable_web_page_preview=True)
 
 
 def history(update: Update, context: CallbackContext) -> None:
@@ -153,8 +158,6 @@ def main() -> None:
         updater.start_webhook(listen=f'0.0.0.0',
                         port=443,
                         url_path=os.environ.get('TELEGRAM_TOKEN', ''),
-                        # key='private.key',
-                        # cert='cert.pem',
                         webhook_url=f'https://{os.environ.get("HOSTNAME", "")}:443/{os.environ.get("TELEGRAM_TOKEN", "")}')
     else:
         updater.start_polling()

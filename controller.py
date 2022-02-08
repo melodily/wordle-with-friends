@@ -124,8 +124,8 @@ class GameController:
 
     def is_guess_legal(self, guess: str) -> bool:
         answer = self.game.answer
-        return len(guess) == len(answer) and guess.lower() in legal_words
+        return type(guess) == str and len(guess) == len(answer) and guess.lower() in legal_words
 
     @classmethod
     def is_answer_legal(cls, answer: str) -> bool:
-        return 4 <= len(answer) <= 6 and answer.lower() in legal_words
+        return type(answer) == str and 4 <= len(answer) <= 6 and answer.lower() in legal_words
