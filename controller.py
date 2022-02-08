@@ -32,17 +32,17 @@ class GameController:
         if self.is_game_ongoing():
             return 'There is an ongoing game already!'
         elif not self.is_answer_legal(answer):
-            return 'Please set a valid word! Words must be between 4 to 6 characters and present in the dictionary.'
+            return 'Please set a valid word! Words must be between 4 to 6 letters and present in the dictionary.'
         elif not self.create_game(answer, setter_chat_id, setter_username):
             return 'Error encountered in the server. Please try again with /start.'
-        return f'{setter_username} has started Wordle with Friends! The word is {len(answer)} characters long. Use /guess [word] to guess. You have 6 tries.'
+        return f'{setter_username} has started Wordle with Friends! \nThe word is {len(answer)} letters long. \nUse /guess [word] to guess. \nYou have 6 tries.'
 
     def try_guessing(self, word, guesser_username) -> str:
         word = word.lower()
         if not self.is_game_ongoing():
             return 'There is no ongoing game! Start a new one with /start.'
         if not self.is_guess_legal(word):
-            return f'"{word}" is invalid! Your guess must be a legal word of {len(self.game.answer)} characters! Use /guess to try again.'
+            return f'"{word}" is invalid! Your guess must be a legal word of {len(self.game.answer)} letters! Use /guess to try again.'
         if not self.add_guess(word, guesser_username):
             return 'Error encountered in the server. Please try again with /guess.'
         return self.display_past_guesses()

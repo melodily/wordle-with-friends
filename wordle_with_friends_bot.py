@@ -41,7 +41,7 @@ def start(update: Update, context: CallbackContext):
     """Send a message when the command /start is issued."""
     if update.effective_chat.type == 'private':
         update.message.reply_text(
-            f"Let's play Wordle with friends! First type your chosen word (4-6 characters) into the message box and press enter.")
+            f"Let's play Wordle with friends! First type your chosen word (4-6 letters) into the message box and press enter.")
         return ConversationStates.SET_WORD
     else:
         controller = GameController(update.effective_chat.id)
@@ -62,13 +62,14 @@ def set_word(update: Update, context: CallbackContext):
         context.bot_data[update.effective_user.id] = word
         url = helpers.create_deep_linked_url(
             context.bot.username, START_GAME_DEEP_LINK, group=True)
-        text = f"Great, {word.upper()} is the answer! Now choose a chat to play with: \n[▶️ <a href='{url}'>Choose chat</a>]."
+        text = f"Great, {word.upper()} is the answer! Now choose a chat to play with: \n[▶️ <a href='{url}'>Choose chat</a>].\n" +
+        "\n Please make sure you have admin rights to the group, as this bot cannot be added otherwise."
         update.message.reply_text(
             text, parse_mode=ParseMode.HTML, disable_web_page_preview=True)
         return ConversationHandler.END
     else:
         update.message.reply_text(
-            "Please set a valid word! Words must be between 4 to 6 characters and present in the dictionary. Use /cancel to exit.")
+            "Please set a valid word! \nWords must be between 4 to 6 letters and present in the dictionary. \nUse /cancel to exit.")
 
 
 def cancel(update: Update, context: CallbackContext):
@@ -100,17 +101,21 @@ def history(update: Update, context: CallbackContext) -> None:
 
 
 def guess(update: Update, context: CallbackContext) -> None:
-    if update.effective_chat.type == 'private':
-        update.message.reply_text(MESSAGE_FOR_INVALID_COMMANDS_IN_PRIVATE_CHAT)
-        return
-    # TODO: save history of games
-    controller = GameController(update.message.chat_id)
-    if not context.args:
-        update.message.reply_text('Please type a word after /guess.')
-        return
-    update.message.reply_text(
-        controller.try_guessing(context.args[0], update.effective_user.first_name), 
-        parse_mode=ParseMode.HTML)
+    try:
+        if update.effective_chat.type == 'private':
+            update.message.reply_text(MESSAGE_FOR_INVALID_COMMANDS_IN_PRIVATE_CHAT)
+            return
+        # TODO: save history of games
+        controller = GameController(update.message.chat_id)
+        if not context.args:
+            update.message.reply_text('Please type a word after /guess.')
+            return
+        update.message.reply_text(
+            controller.try_guessing(context.args[0], update.effective_user.first_name), 
+            parse_mode=ParseMode.HTML)
+    except Exception as e:
+        logger.error(e)
+        logger.error(update)
 
 
 def help_command(update: Update, context: CallbackContext) -> None:
@@ -118,6 +123,9 @@ def help_command(update: Update, context: CallbackContext) -> None:
     """Send a message when the command /help is issued."""
     update.message.reply_text(
         '\n'.join([
+            "This follows the rules of Wordle. Guess the word set by your friend." +
+            "A green box shows a correct letter in the correct position," + 
+            "a yellow box shows a correct letter in the wrong position, and a black box shows a wrong letter.",
             "/start to start a game",
             "/guess [word] to guess the word",
             "/history to see past guesses"
