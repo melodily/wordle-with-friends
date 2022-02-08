@@ -18,11 +18,11 @@ RUN apt-get install -y python3 python3-pip python-dev build-essential python3-ve
 
 COPY requirements.txt ./requirements.txt
 RUN pip install -r requirements.txt
+COPY entrypoint.sh entrypoint.sh
 
 RUN mkdir -p /src
 ADD . /src
 WORKDIR /src
 
-RUN chmod +x /src/wordle_with_friends_bot.py
-RUN cd /src
-CMD python wordle_with_friends_bot.py
+EXPOSE 443
+CMD ["sh", "entrypoint.sh"]

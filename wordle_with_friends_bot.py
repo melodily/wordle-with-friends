@@ -21,6 +21,7 @@ from telegram.ext import Updater, InlineQueryHandler, CommandHandler, CallbackCo
 from telegram.utils import helpers
 from controller import GameController
 from enum import IntEnum
+from app import db
 
 # Enable logging
 logging.basicConfig(
@@ -78,7 +79,7 @@ def cancel(update: Update, context: CallbackContext):
 def handle_after_choosing_group(update: Update, context: CallbackContext) -> None:
     chat_id = update.effective_chat.id
     user = update.effective_user
-    answer = context.bot_data[user.id]
+    answer = context.bot_data.get(user.id)
     controller = GameController(chat_id)
     update.message.reply_text(controller.try_create_game(
         answer, update.effective_user.id, update.effective_user.first_name)
@@ -120,7 +121,6 @@ def help_command(update: Update, context: CallbackContext) -> None:
 
 
 def main() -> None:
-    load_dotenv()
     """Start the bot."""
     logger.info("bot started")
     updater = Updater(os.environ.get('TELEGRAM_TOKEN'))
@@ -146,16 +146,16 @@ def main() -> None:
         fallbacks=[CommandHandler('cancel', cancel)]
     )
     dispatcher.add_handler(conv_handler)
-
     # Start the Bot        
     if os.environ.get('ENV') == 'prod':
-        updater.start_webhook(listen=os.environ.get("HOSTNAME", ""),
-                        port=8443,
+        updater.start_webhook(listen=f'0.0.0.0',
+                        port=443,
                         url_path=os.environ.get('TELEGRAM_TOKEN', ''),
-                        key='private.key',
-                        cert='cert.pem',
-                        webhook_url=f'https://{os.environ.get("HOSTNAME", "")}/{os.environ.get("TELEGRAM_TOKEN", "")}')
+                        # key='private.key',
+                        # cert='cert.pem',
+                        webhook_url=f'https://{os.environ.get("HOSTNAME", "")}:443/{os.environ.get("TELEGRAM_TOKEN", "")}')
     else:
+        load_dotenv()
         updater.start_polling()
 
     # Run the bot until you press Ctrl-C or the process receives SIGINT,
