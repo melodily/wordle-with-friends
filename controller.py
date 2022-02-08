@@ -69,6 +69,8 @@ class GameController:
             history += "\nCongratulations! Use /start to play again!"
         elif len(guesses) == self.MAX_GUESSES:
             history += f"\nBetter luck next time! The answer was {self.game.answer.upper()}. Use /start to start another game!"
+        else:
+            history += f"\n{self.format_keyboard()}"
         return history
 
     def format_guess_result(self, guess: str) -> str:
@@ -95,6 +97,44 @@ class GameController:
                     guess_result[i] = self.YELLOW_SQUARE
                     break
         return ''.join(guess_result)
+    
+    def format_keyboard(self):
+        if not self.game or not self.game.get_guesses():
+            return ''
+        guesses = self.game.get_guesses()
+        answer = self.game.answer
+        # 0 for wrong letter, 1 for wrong position, 2 for right position
+        output_dict = {}
+        for guess in guesses:
+            word = guess['guess']
+            for i in range(len(word)):
+                c = word[i]
+                if c == answer[i]:
+                    output_dict[c] = 2
+                elif c in answer:
+                    output_dict[c] = 2 if output_dict.get(c) == 2 else 1
+                else:
+                    output_dict[c] = 0
+                # output_dict[c] = c in answer or output_dict.get(c, False)
+
+        keyboard_rows = ['qwertyuiop', 'asdfghjkl', 'zxcvbnm']
+        output = []
+        for row in keyboard_rows:
+            output_row = []
+            for c in row:
+                if c in output_dict:
+                    if output_dict[c] == 0:
+                        result = f"<s>{c}</s>"
+                    elif output_dict[c] == 1:
+                        result = f"<u><i>{c}</i></u>"
+                    else:
+                        result = f"<u><b>{c}</b></u>"
+                else:
+                    result = c
+                output_row.append(result)
+            output.append(' '.join(output_row))
+        return '\n'.join(output).upper()
+
 
     def create_game(self, answer: str, setter_chat_id: str, setter_username: str) -> bool:
         try:

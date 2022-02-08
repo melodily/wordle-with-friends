@@ -62,8 +62,8 @@ def set_word(update: Update, context: CallbackContext):
         context.bot_data[update.effective_user.id] = word
         url = helpers.create_deep_linked_url(
             context.bot.username, START_GAME_DEEP_LINK, group=True)
-        text = f"Great, {word.upper()} is the answer! Now choose a chat to play with: \n[▶️ <a href='{url}'>Choose chat</a>].\n" +
-        "\n Please make sure you have admin rights to the group, as this bot cannot be added otherwise."
+        text = (f"Great, {word.upper()} is the answer! Now choose a chat to play with: \n[▶️ <a href='{url}'>Choose chat</a>].\n" 
+        "Please make sure you have admin rights to the group, as this bot cannot be added otherwise.")
         update.message.reply_text(
             text, parse_mode=ParseMode.HTML, disable_web_page_preview=True)
         return ConversationHandler.END
