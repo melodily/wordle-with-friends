@@ -123,6 +123,8 @@ def help_command(update: Update, context: CallbackContext) -> None:
 def main() -> None:
     """Start the bot."""
     logger.info("bot started")
+    if os.environ.get('ENV') != 'prod':
+        load_dotenv()
     updater = Updater(os.environ.get('TELEGRAM_TOKEN'))
 
     # Get the dispatcher to register handlers
@@ -155,7 +157,6 @@ def main() -> None:
                         # cert='cert.pem',
                         webhook_url=f'https://{os.environ.get("HOSTNAME", "")}:443/{os.environ.get("TELEGRAM_TOKEN", "")}')
     else:
-        load_dotenv()
         updater.start_polling()
 
     # Run the bot until you press Ctrl-C or the process receives SIGINT,

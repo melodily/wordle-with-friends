@@ -5,10 +5,10 @@ from app import db
 class Game(db.Model):
     __tablename__ = 'games'
 
-    id = db.Column(db.Integer, primary_key=True)
-    setter_chat_id = db.Column(db.Integer, nullable=False)
+    id = db.Column(db.BigInteger, primary_key=True)
+    setter_chat_id = db.Column(db.BigInteger, nullable=False)
     setter_username = db.Column(db.String(), nullable=False)
-    chat_id = db.Column(db.Integer, nullable=False, unique=True)
+    chat_id = db.Column(db.BigInteger, nullable=False, unique=True)
     answer = db.Column(db.String(), nullable=False)
     guesses = db.Column(JSON)
 
