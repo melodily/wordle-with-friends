@@ -16,8 +16,8 @@ bot.
 import logging
 from dotenv import load_dotenv
 import os
-from telegram import InlineKeyboardButton, InlineKeyboardMarkup, InlineQueryResultArticle, ParseMode, InputTextMessageContent, ReplyKeyboardMarkup, Update
-from telegram.ext import Updater, InlineQueryHandler, CommandHandler, CallbackContext, CallbackQueryHandler, Filters, ConversationHandler, MessageHandler
+from telegram import ParseMode, Update
+from telegram.ext import Updater, CommandHandler, CallbackContext, Filters, ConversationHandler, MessageHandler
 from telegram.utils import helpers
 from controller import GameController
 from enum import IntEnum
@@ -41,7 +41,7 @@ def start(update: Update, context: CallbackContext):
     """Send a message when the command /start is issued."""
     if update.effective_chat.type == 'private':
         update.message.reply_text(
-            f"Let's play Wordle with friends! First type your chosen word (4-6 characters) into the message box and press enter.")
+            f"Let's play Wordle with friends! First type your chosen word (4-6 letters) into the message box and press enter.")
         return ConversationStates.SET_WORD
     else:
         controller = GameController(update.effective_chat.id)
@@ -62,13 +62,14 @@ def set_word(update: Update, context: CallbackContext):
         context.bot_data[update.effective_user.id] = word
         url = helpers.create_deep_linked_url(
             context.bot.username, START_GAME_DEEP_LINK, group=True)
-        text = f"Great, {word.upper()} is the answer! Now choose a chat to play with: \n[▶️ <a href='{url}'>Choose chat</a>]."
+        text = f"Great, {word.upper()} is the answer! Now choose a chat to play with: \n[▶️ <a href='{url}'>Choose chat</a>].\n" +
+        "\n Please make sure you have admin rights to the group, as this bot cannot be added otherwise."
         update.message.reply_text(
             text, parse_mode=ParseMode.HTML, disable_web_page_preview=True)
         return ConversationHandler.END
     else:
         update.message.reply_text(
-            "Please set a valid word! Words must be between 4 to 6 characters and present in the dictionary. Use /cancel to exit.")
+            "Please set a valid word! \nWords must be between 4 to 6 letters and present in the dictionary. \nUse /cancel to exit.")
 
 
 def cancel(update: Update, context: CallbackContext):
@@ -81,9 +82,14 @@ def handle_after_choosing_group(update: Update, context: CallbackContext) -> Non
     user = update.effective_user
     answer = context.bot_data.get(user.id)
     controller = GameController(chat_id)
-    update.message.reply_text(controller.try_create_game(
-        answer, update.effective_user.id, update.effective_user.first_name)
-    )
+    if answer:
+        update.message.reply_text(controller.try_create_game(
+            answer, update.effective_user.id, update.effective_user.first_name)
+        )
+    else:
+        url = helpers.create_deep_linked_url(context.bot.username, SET_WORD_DEEP_LINK)
+        update.message.reply_text(f"Sorry, we lost your answer. Try creating a new one here: \n[▶️ <a href='{url}'>Set word</a>]",
+        parse_mode=ParseMode.HTML, disable_web_page_preview=True)
 
 
 def history(update: Update, context: CallbackContext) -> None:
@@ -95,17 +101,21 @@ def history(update: Update, context: CallbackContext) -> None:
 
 
 def guess(update: Update, context: CallbackContext) -> None:
-    if update.effective_chat.type == 'private':
-        update.message.reply_text(MESSAGE_FOR_INVALID_COMMANDS_IN_PRIVATE_CHAT)
-        return
-    # TODO: save history of games
-    controller = GameController(update.message.chat_id)
-    if not context.args:
-        update.message.reply_text('Please type a word after /guess.')
-        return
-    update.message.reply_text(
-        controller.try_guessing(context.args[0], update.effective_user.first_name), 
-        parse_mode=ParseMode.HTML)
+    try:
+        if update.effective_chat.type == 'private':
+            update.message.reply_text(MESSAGE_FOR_INVALID_COMMANDS_IN_PRIVATE_CHAT)
+            return
+        # TODO: save history of games
+        controller = GameController(update.message.chat_id)
+        if not context.args:
+            update.message.reply_text('Please type a word after /guess.')
+            return
+        update.message.reply_text(
+            controller.try_guessing(context.args[0], update.effective_user.first_name), 
+            parse_mode=ParseMode.HTML)
+    except Exception as e:
+        logger.error(e)
+        logger.error(update)
 
 
 def help_command(update: Update, context: CallbackContext) -> None:
@@ -113,6 +123,9 @@ def help_command(update: Update, context: CallbackContext) -> None:
     """Send a message when the command /help is issued."""
     update.message.reply_text(
         '\n'.join([
+            "This follows the rules of Wordle. Guess the word set by your friend." +
+            "A green box shows a correct letter in the correct position," + 
+            "a yellow box shows a correct letter in the wrong position, and a black box shows a wrong letter.",
             "/start to start a game",
             "/guess [word] to guess the word",
             "/history to see past guesses"
@@ -153,8 +166,6 @@ def main() -> None:
         updater.start_webhook(listen=f'0.0.0.0',
                         port=443,
                         url_path=os.environ.get('TELEGRAM_TOKEN', ''),
-                        # key='private.key',
-                        # cert='cert.pem',
                         webhook_url=f'https://{os.environ.get("HOSTNAME", "")}:443/{os.environ.get("TELEGRAM_TOKEN", "")}')
     else:
         updater.start_polling()
