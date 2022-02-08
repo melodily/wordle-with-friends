@@ -21,7 +21,12 @@ class GameController:
         self.game = self.retrieve_game()
 
     def retrieve_game(self):
-        return Game.query.filter_by(chat_id=self.chat_id).first()
+        try:
+            return Game.query.filter_by(chat_id=self.chat_id).first()
+        except Exception as e:
+            logger.error(e)
+            db.session.rollback()
+            return None
 
     def try_create_game(self, answer, setter_chat_id, setter_username) -> str:
         if self.is_game_ongoing():
@@ -104,6 +109,7 @@ class GameController:
             return True
         except Exception as e:
             logger.error(e)
+            db.session.rollback()
             return False
 
     def add_guess(self, guess: str, guesser_username: str) -> bool:
@@ -113,6 +119,7 @@ class GameController:
             return True
         except Exception as e:
             logger.error(e)
+            db.session.rollback()
             return False
 
     def is_guess_legal(self, guess: str) -> bool:
