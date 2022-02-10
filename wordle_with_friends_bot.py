@@ -101,6 +101,8 @@ def history(update: Update, context: CallbackContext) -> None:
 
 
 def guess(update: Update, context: CallbackContext) -> None:
+    if not update.message:
+        return
     try:
         if update.effective_chat.type == 'private':
             update.message.reply_text(MESSAGE_FOR_INVALID_COMMANDS_IN_PRIVATE_CHAT)
