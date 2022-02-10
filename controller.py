@@ -6,7 +6,7 @@ logger = logging.getLogger(__name__)
 legal_words = []
 
 with open("models/legal_words.txt") as file:
-    legal_words = [word.strip() for word in file.readlines()]
+    legal_words = {word.strip() for word in file.readlines()}
     logger.info('populating')
 
 
