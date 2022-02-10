@@ -61,7 +61,7 @@ class GameController:
             return 'There have been no guesses so far. Use /guess to guess.'
         row = []
         for i in range(len(guesses)):
-            row.append(f"""<code>{' '.join([c for c in guesses[i]['guess'].upper()])}</code>""")
+            row.append(f"""<code>{'  '.join([c for c in guesses[i]['guess'].upper()])}</code>""")
             row.append(self.format_guess_result(guesses[i]['guess']))
             row.append(f"({guesses[i]['by']}: {i+1}/{self.MAX_GUESSES})")
         history = f"Game started by {self.game.setter_username}\n" + "\n".join(row)
@@ -96,7 +96,7 @@ class GameController:
                     has_char_in_answer_been_found[j] = True
                     guess_result[i] = self.YELLOW_SQUARE
                     break
-        return ''.join(guess_result)
+        return ' '.join(guess_result)
     
     def format_keyboard(self):
         if not self.game or not self.game.get_guesses():
@@ -115,7 +115,6 @@ class GameController:
                     output_dict[c] = 2 if output_dict.get(c) == 2 else 1
                 else:
                     output_dict[c] = 0
-                # output_dict[c] = c in answer or output_dict.get(c, False)
 
         keyboard_rows = ['qwertyuiop', 'asdfghjkl', 'zxcvbnm']
         output = []
@@ -132,7 +131,7 @@ class GameController:
                 else:
                     result = c
                 output_row.append(result)
-            output.append(' '.join(output_row))
+            output.append('  '.join(output_row))
         return '\n'.join(output).upper()
 
 
