@@ -66,9 +66,9 @@ class GameController:
             row.append(f"({guesses[i]['by']}: {i+1}/{self.MAX_GUESSES})")
         history = f"Game started by {self.game.setter_username}\n" + "\n".join(row)
         if guesses[-1]['guess'].lower() == self.game.answer:
-            history += "\nCongratulations! Use /start to play again!"
+            history += "\nCongratulations! Use /start to play again! #wordlewithfriends"
         elif len(guesses) == self.MAX_GUESSES:
-            history += f"\nBetter luck next time! The answer was {self.game.answer.upper()}. Use /start to start another game!"
+            history += f"\nBetter luck next time! The answer was {self.game.answer.upper()}. Use /start to start another game! #wordlewithfriends"
         else:
             history += f"\n{self.format_keyboard()}"
         return history
