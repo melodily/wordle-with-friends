@@ -122,12 +122,12 @@ class GameController:
             output_row = []
             for c in row:
                 if c in output_dict:
-                    if output_dict[c] == 0:
-                        result = f"<s>{c}</s>"
+                    if output_dict[c] == 2:
+                        result = f"<u><b>{c}</b></u>"
                     elif output_dict[c] == 1:
                         result = f"<u><i>{c}</i></u>"
                     else:
-                        result = f"<u><b>{c}</b></u>"
+                        result = "  "
                 else:
                     result = c
                 output_row.append(result)
