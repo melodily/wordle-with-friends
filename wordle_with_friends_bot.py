@@ -121,7 +121,6 @@ def guess(update: Update, context: CallbackContext) -> None:
 
 
 def help_command(update: Update, context: CallbackContext) -> None:
-    # TODO: Put commands in inline buttons
     """Send a message when the command /help is issued."""
     update.message.reply_text(
         '\n'.join([
@@ -130,7 +129,9 @@ def help_command(update: Update, context: CallbackContext) -> None:
             "a yellow box shows a correct letter in the wrong position, and a black box shows a wrong letter.",
             "/start to start a game",
             "/guess [word] to guess the word",
-            "/history to see past guesses"
+            "/history to see past guesses",
+            "",
+            "Please email wordlewithfriendsbot@gmail.com for bug reports and suggestions."
         ])
     )
 
