@@ -22,6 +22,7 @@ from telegram.utils import helpers
 from controller import GameController
 from enum import IntEnum
 from app import db
+from constants import SERVER_ERROR
 
 # Enable logging
 logging.basicConfig(
@@ -44,16 +45,19 @@ def start(update: Update, context: CallbackContext):
             f"Let's play Wordle with friends! First type your chosen word (4-6 letters) into the message box and press enter.")
         return ConversationStates.SET_WORD
     else:
-        controller = GameController(update.effective_chat.id)
-        if controller.is_game_ongoing():
-            update.message.reply_text(
-                f"{controller.game.setter_username} has started a game. Use /guess to guess the word!")
-        else:
-            # Redirect to bot if in group chat and no ongoing game
-            url = helpers.create_deep_linked_url(context.bot.username, SET_WORD_DEEP_LINK)
-            text = f"Let's play Wordle with Friends! Go here to set your word: \n[▶️ <a href='{url}'>Set word</a>]."
-            update.message.reply_text(
-                text, parse_mode=ParseMode.HTML, disable_web_page_preview=True)
+        try:
+            controller = GameController(update.effective_chat.id)
+            if controller.is_game_ongoing():
+                update.message.reply_text(
+                    f"{controller.game.setter_username} has started a game. Use /guess to guess the word!")
+            else:
+                # Redirect to bot if in group chat and no ongoing game
+                url = helpers.create_deep_linked_url(context.bot.username, SET_WORD_DEEP_LINK)
+                text = f"Let's play Wordle with Friends! Go here to set your word: \n[▶️ <a href='{url}'>Set word</a>]."
+                update.message.reply_text(
+                    text, parse_mode=ParseMode.HTML, disable_web_page_preview=True)
+        except:
+            update.message.reply_text(SERVER_ERROR)
 
 
 def set_word(update: Update, context: CallbackContext):
@@ -78,26 +82,32 @@ def cancel(update: Update, context: CallbackContext):
 
 
 def handle_after_choosing_group(update: Update, context: CallbackContext) -> None:
-    chat_id = update.effective_chat.id
-    user = update.effective_user
-    answer = context.bot_data.get(user.id)
-    controller = GameController(chat_id)
-    if answer:
-        update.message.reply_text(controller.try_create_game(
-            answer, update.effective_user.id, update.effective_user.first_name)
-        )
-    else:
-        url = helpers.create_deep_linked_url(context.bot.username, SET_WORD_DEEP_LINK)
-        update.message.reply_text(f"Sorry, we lost your answer. Try creating a new one here: \n[▶️ <a href='{url}'>Set word</a>]",
-        parse_mode=ParseMode.HTML, disable_web_page_preview=True)
+    try:
+        chat_id = update.effective_chat.id
+        user = update.effective_user
+        answer = context.bot_data.get(user.id)
+        controller = GameController(chat_id)
+        if answer:
+            update.message.reply_text(controller.try_create_game(
+                answer, update.effective_user.id, update.effective_user.first_name)
+            )
+        else:
+            url = helpers.create_deep_linked_url(context.bot.username, SET_WORD_DEEP_LINK)
+            update.message.reply_text(f"Sorry, we lost your answer. Try creating a new one here: \n[▶️ <a href='{url}'>Set word</a>]",
+            parse_mode=ParseMode.HTML, disable_web_page_preview=True)
+    except:
+        update.message.reply_text(SERVER_ERROR)
 
 
 def history(update: Update, context: CallbackContext) -> None:
-    if update.effective_chat.type == 'private':
-        update.message.reply_text(MESSAGE_FOR_INVALID_COMMANDS_IN_PRIVATE_CHAT)
-        return
-    controller = GameController(update.message.chat_id)
-    update.message.reply_text(controller.display_past_guesses(), parse_mode=ParseMode.HTML)
+    try:
+        if update.effective_chat.type == 'private':
+            update.message.reply_text(MESSAGE_FOR_INVALID_COMMANDS_IN_PRIVATE_CHAT)
+            return
+        controller = GameController(update.message.chat_id)
+        update.message.reply_text(controller.display_past_guesses(), parse_mode=ParseMode.HTML)
+    except: 
+        update.message.reply_text(SERVER_ERROR)
 
 
 def guess(update: Update, context: CallbackContext) -> None:
@@ -118,6 +128,7 @@ def guess(update: Update, context: CallbackContext) -> None:
     except Exception as e:
         logger.error(e)
         logger.error(update)
+        update.message.reply_text(SERVER_ERROR)
 
 
 def help_command(update: Update, context: CallbackContext) -> None:

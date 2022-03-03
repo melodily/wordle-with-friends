@@ -1,0 +1,1 @@
+SERVER_ERROR = 'Error encountered in the server. Please try again or email wordlewithfriendsbot@gmail.com with a bug report.'

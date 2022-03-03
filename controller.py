@@ -1,6 +1,7 @@
 import logging
 from models.game import Game
 from app import db
+from constants import SERVER_ERROR
 
 logger = logging.getLogger(__name__)
 legal_words = []
@@ -12,6 +13,7 @@ with open("models/legal_words.txt") as file:
 
 class GameController:
     MAX_GUESSES = 6
+    MAX_RETRIES = 10
     GREEN_SQUARE = '\U0001F7E9'
     YELLOW_SQUARE = '\U0001F7E8'
     BLACK_SQUARE = '\U00002B1B'
@@ -20,13 +22,17 @@ class GameController:
         self.chat_id = chat_id
         self.game = self.retrieve_game()
 
-    def retrieve_game(self):
+    def retrieve_game(self, counter=0):
         try:
             return Game.query.filter_by(chat_id=self.chat_id).order_by(Game.id.desc()).first()
         except Exception as e:
             logger.error(e)
-            db.session.rollback()
-            return None
+            db.session.close()
+            counter += 1
+            if counter < self.MAX_RETRIES:
+                return self.retrieve_game(counter)
+            else:
+                raise e
 
     def try_create_game(self, answer, setter_chat_id, setter_username) -> str:
         if self.is_game_ongoing():
@@ -34,7 +40,7 @@ class GameController:
         elif not self.is_answer_legal(answer):
             return 'Please set a valid word! Words must be between 4 to 6 letters and present in the dictionary.'
         elif not self.create_game(answer, setter_chat_id, setter_username):
-            return 'Error encountered in the server. Please try again with /start, or email wordlewithfriendsbot@gmail.com with a bug report.'
+            return SERVER_ERROR
         return f'{setter_username} has started Wordle with Friends! \nThe word is {len(answer)} letters long. \nUse /guess [word] to guess. \nYou have 6 tries.'
 
     def try_guessing(self, word, guesser_username) -> str:
@@ -44,7 +50,7 @@ class GameController:
         if not self.is_guess_legal(word):
             return f'"{word}" is invalid! Your guess must be a legal word of {len(self.game.answer)} letters! Use /guess to try again.'
         if not self.add_guess(word, guesser_username):
-            return 'Error encountered in the server. Please try again with /guess, or email wordlewithfriendsbot@gmail.com with a bug report.'
+            return SERVER_ERROR
         return self.display_past_guesses()
 
     def is_game_ongoing(self) -> bool:
@@ -135,7 +141,7 @@ class GameController:
         return '\n'.join(output).upper()
 
 
-    def create_game(self, answer: str, setter_chat_id: str, setter_username: str) -> bool:
+    def create_game(self, answer: str, setter_chat_id: str, setter_username: str, counter=0) -> bool:
         try:
             if self.game:
                 self.game = None
@@ -148,9 +154,12 @@ class GameController:
         except Exception as e:
             logger.error(e)
             db.session.rollback()
+            counter += 1
+            if counter < self.MAX_RETRIES:
+                return self.create_game(answer, setter_chat_id, setter_username, counter)
             return False
 
-    def add_guess(self, guess: str, guesser_username: str) -> bool:
+    def add_guess(self, guess: str, guesser_username: str, counter=0) -> bool:
         try:
             self.game.add_guess(guess, guesser_username)
             db.session.commit()
@@ -158,6 +167,9 @@ class GameController:
         except Exception as e:
             logger.error(e)
             db.session.rollback()
+            counter += 1
+            if counter < self.MAX_RETRIES:
+                return self.add_guess(guess, guesser_username, counter)
             return False
 
     def is_guess_legal(self, guess: str) -> bool:
